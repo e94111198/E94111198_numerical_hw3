@@ -1,0 +1,74 @@
+#include <stdio.h>
+#include <math.h>
+
+#define N 5 // Number of given data points
+
+// Given data points
+double T[N] = {0, 3, 5, 8, 13};
+double D[N] = {0, 200, 375, 620, 990};
+double V[N] = {75, 77, 80, 74, 72};
+
+// Function to perform Hermite interpolation
+double hermite_interpolation(double t) {
+    double result = 0.0;
+    for (int i = 0; i < N; i++) {
+        double term = D[i];
+        for (int j = 0; j < N; j++) {
+            if (i != j) {
+                term *= (t - T[j]) / (T[i] - T[j]);
+            }
+        }
+        result += term;
+    }
+    return result;
+}
+
+// Numerical derivative of Hermite polynomial
+double hermite_derivative(double t) {
+    double h = 0.001; // Small step for numerical differentiation
+    return (hermite_interpolation(t + h) - hermite_interpolation(t - h)) / (2 * h);
+}
+
+// Function to find the maximum speed
+double find_max_speed(double start, double end, double step) {
+    double max_speed = 0.0;
+    for (double t = start; t <= end; t += step) {
+        double speed = hermite_derivative(t);
+        if (speed > max_speed) {
+            max_speed = speed;
+        }
+    }
+    return max_speed;
+}
+
+// Function to find the first time car exceeds 55 mi/h (80.67 ft/s)
+double find_first_exceed_time(double start, double end, double step) {
+    for (double t = start; t <= end; t += step) {
+        if (hermite_derivative(t) > 80.67) {
+            return t;
+        }
+    }
+    return -1; // Return -1 if speed limit is never exceeded
+}
+
+int main() {
+    // Part (a): Predict position and speed at t = 10s
+    double t_a = 10;
+    double position_a = hermite_interpolation(t_a);
+    double speed_a = hermite_derivative(t_a);
+    printf("(a) Predicted position at t = 10s: %.2f ft\n", position_a);
+    printf(" Predicted speed at t = 10s: %.2f ft/s\n", speed_a);
+
+    // Part (b): Find first time exceeding 55 mi/h (80.67 ft/s)
+    double exceed_time = find_first_exceed_time(T[0], T[N-1], 0.1);
+    if (exceed_time != -1)
+        printf("(b) First time exceeding 55 mi/h: %.2f s\n", exceed_time);
+    else
+        printf("(b) Car never exceeds 55 mi/h\n");
+
+    // Part (c): Find predicted maximum speed
+    double max_speed = find_max_speed(T[0], T[N-1], 0.1);
+    printf("(c) Predicted maximum speed: %.2f ft/s\n", max_speed);
+    
+    return 0;
+}
