@@ -1,0 +1,76 @@
+#include <stdio.h>
+#include <math.h>
+
+// Lagrange 插值函數：使用 n 個點（n = degree + 1）
+double lagrangeInterpolation(double x[], double y[], int n, double x_value) {
+    double result = 0.0;
+
+    for (int i = 0; i < n; i++) {
+        double term = y[i];
+
+        for (int j = 0; j < n; j++) {
+            if (i != j) {
+                term *= (x_value - x[j]) / (x[i] - x[j]);
+            }
+        }
+
+        result += term;
+    }
+
+    return result;
+}
+
+// 誤差估計函數
+double lagrangeErrorBound(double x[], int n, double x_value) {
+    double product = 1.0;
+
+    for (int i = 0; i < n; i++) {
+        product *= (x_value - x[i]);
+    }
+
+    // 計算 n 階階乘 (n!)
+    double factorial = 1.0;
+    for (int i = 1; i <= n; i++) {
+        factorial *= i;
+    }
+
+    // cos(x) 導數最大值不超過 1
+    double max_derivative = 1.0;
+
+    return fabs(max_derivative * product / factorial);
+}
+
+int main() {
+    // 已知資料點
+    double x_all[] = {0.698, 0.733, 0.768, 0.803};
+    double y_all[] = {0.7661, 0.7432, 0.7193, 0.6946};
+    int total_points = 4;
+
+    double x_target = 0.750;
+    double actual_value = 0.7317; // 真值
+
+    // 執行 degree 1 到 degree 3 的插值（最多用到4個點）
+    for (int degree = 1; degree <= 3; degree++) {
+        int n = degree + 1; // 使用點數
+        double x[4], y[4]; // 暫存用的 x, y 陣列
+
+        // 把前 n 個點取出來
+        for (int i = 0; i < n; i++) {
+            x[i] = x_all[i];
+            y[i] = y_all[i];
+        }
+
+        double result = lagrangeInterpolation(x, y, n, x_target);
+        double error_bound = lagrangeErrorBound(x, n, x_target);
+        double actual_error = fabs(result - actual_value);
+
+        printf("使用 %d 階 Lagrange 多項式:\n", degree);
+        printf("  近似 cos(%.3f) = %.11f\n", x_target, result);
+        printf("  誤差界估計值: %.11f\n", error_bound);
+        printf("  真實誤差: %.11f\n\n", actual_error);
+        
+    }
+    printf("  degree 4:只有提供4點，無法求");
+
+    return 0;
+}
