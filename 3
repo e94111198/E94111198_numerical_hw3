@@ -1,37 +1,54 @@
 import numpy as np
 from scipy.interpolate import CubicHermiteSpline
-from scipy.optimize import minimize_scalar, root_scalar
 
+# 已知數據點
 time_points = np.array([0, 3, 5, 8, 13])
 distance_points = np.array([0, 200, 375, 620, 990])
 velocity_points = np.array([75, 77, 80, 74, 72])
 
+# 建立 Hermite 插值樣條函數
 spline = CubicHermiteSpline(time_points, distance_points, velocity_points)
+velocity_spline = spline.derivative()  # 速度函數
 
-# (a) 
+# (a) 預測 t = 10 秒時的位置與速度
 time_query = 10
 position_at_t = spline(time_query)
-speed_at_t = spline.derivative()(time_query)
+speed_at_t = velocity_spline(time_query)
 
-print("Question (a):")
-print(f"At t = {time_query}s: Position = {position_at_t:.2f} ft, Speed = {speed_at_t:.2f} ft/s")
+# (b) 找出何時速度超過 80.67 ft/s (55 mi/h)
+threshold_speed = 80.67
+times_fine = np.linspace(time_points[0], time_points[-1], 1000)
+speeds_fine = velocity_spline(times_fine)
 
-# (b)
-def speed_threshold(t):
-    return spline.derivative()(t) - 80.67
+# 找出速度首次超過 80.67 ft/s 的時間點（線性內插）
+exceed_index = np.where(speeds_fine > threshold_speed)[0]
+if exceed_index.size > 0:
+    first_exceed_time = np.interp(threshold_speed, speeds_fine[exceed_index[0]-1:exceed_index[0]+1], times_fine[exceed_index[0]-1:exceed_index[0]+1])
+else:
+    first_exceed_time = None
 
-try:
-    crossing_time = root_scalar(speed_threshold, bracket=[3, 3.5], method='brentq').root
-    print("\nQuestion (b):")
-    print(f"The car first exceeds 55 mi/h at t = {crossing_time:.2f} s")
-except ValueError:
-    print("\nQuestion (b):")
-    print("Error: Could not determine when speed exceeds 55 mi/h")
+# (c) 找最大速度 (求導函數的零點來找極值)
+speed_derivative_fine = np.gradient(speeds_fine, times_fine)
+zero_crossings = np.where(np.diff(np.sign(speed_derivative_fine)))[0]
 
-# (c) 
-opt_result = minimize_scalar(lambda t: -spline.derivative()(t), bounds=(time_points[0], time_points[-1]), method='bounded')
-peak_speed = -opt_result.fun
-peak_time = opt_result.x
+# 找出速度函數的極值點，選擇最大速度
+if zero_crossings.size > 0:
+    candidate_times = times_fine[zero_crossings]
+    candidate_speeds = velocity_spline(candidate_times)
+    max_speed_index = np.argmax(candidate_speeds)
+    peak_speed = candidate_speeds[max_speed_index]
+    peak_time = candidate_times[max_speed_index]
+else:
+    peak_speed = None
+    peak_time = None
 
-print("\n Question (c):")
-print(f"Maximum Speed = {peak_speed:.2f} ft/s at t = {peak_time:.2f} s")
+# 顯示結果
+print(f"(a) t = {time_query}s: 位置 = {position_at_t:.2f} ft, 速度 = {speed_at_t:.2f} ft/s")
+if first_exceed_time:
+    print(f"(b) 車輛首次超過 55 mi/h (80.67 ft/s) 的時間: t = {first_exceed_time:.2f} s")
+else:
+    print("(b) 車輛從未超過 55 mi/h")
+if peak_speed:
+    print(f"(c) 最大速度 = {peak_speed:.2f} ft/s,在 t = {peak_time:.2f} s")
+else:
+    print("(c) 未找到最大速度")
